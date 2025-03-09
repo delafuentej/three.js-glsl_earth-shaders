@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 import GUI from 'lil-gui';
 import earthVertexShader from './shaders/earth/vertex.glsl';
 import earthFragmentShader from './shaders/earth/fragment.glsl';
 import atmosphereVertexShader from './shaders/atmosphere/vertex.glsl';
 import atmosphereFragmentShader from './shaders/atmosphere/fragment.glsl';
+
 
 /**
  * Earth-Shaders- Creating a realistic Earth: 
@@ -46,6 +48,9 @@ import atmosphereFragmentShader from './shaders/atmosphere/fragment.glsl';
  */
 // Debug
 const gui = new GUI();
+gui.domElement.style.touchAction = 'none'; // Evita que el touchstart se interprete como un intento de desplazamiento
+document.body.appendChild(gui.domElement);
+
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -56,7 +61,16 @@ const scene = new THREE.Scene();
 // Loaders
 const textureLoader = new THREE.TextureLoader();
 
+/**
+ * Environment map
+ */
 
+const envMap = new THREE.CubeTextureLoader()
+  .setPath("/galaxy/")
+  .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
+envMap.encoding = THREE.sRGBEncoding;
+scene.background = envMap;
+scene.environment = envMap;
 
 /**
  * Earth
@@ -85,9 +99,15 @@ gui
 const earthDayTexture = textureLoader.load('./earth/day.jpg');
 const earthNightTexture = textureLoader.load('./earth/night.jpg');
 const earthSpecularCloundsTexture = textureLoader.load('./earth/specularClouds.jpg');//this is a data file
+// Load textures -flare effect
+const sunTextureFlare= textureLoader.load('./lenses/lensflare0.png');//sunTextureFlare
+const moonTextureFlare = textureLoader.load('./lenses/lensflare1.png');//moonTextureFlare
+
 //update their colorSpace to THREE.SRGBColorSpace
 earthDayTexture.colorSpace = THREE.SRGBColorSpace;
 earthNightTexture.colorSpace = THREE.SRGBColorSpace;
+// sunTextureFlare.colorSpace = THREE.SRGBColorSpace;
+// moonTextureFlare.colorSpace = THREE.SRGBColorSpace;
 //Anisotropy
 earthDayTexture.anisotropy = 8;
 earthNightTexture.anisotropy = 8;
@@ -134,24 +154,35 @@ atmosphere.scale.set(1.025, 1.025, 1.025);
 scene.add(atmosphere);
 
 
-/**
- * Sun- phi & theta: the angles used in the spherical coordinate system 
- * to describe the position of a point on the surface of the sphere.
- * phi - polar angle in radians from 0 to up. By default is 0
- * theta - equator angle in radians around the y(up ) axis
- * Since the sunSpherical radius = 1; => sunDirection lenght sould be 1 <=> equal in fragment.glsl
- */
-const sunSpherical = new THREE.Spherical(1, Math.PI * 0.5, 0.5);
+
+//Sun
+const sunSpherical = new THREE.Spherical(1, Math.PI * 0.5, -0.8);//0.5
 const sunDirection = new THREE.Vector3();
+
+
+
+
 
 //Update sun
 
 // Debug 
 const debugSun = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.1, 2),
-    new THREE.MeshBasicMaterial()
+    new THREE.IcosahedronGeometry(0.15, 2),
+    new THREE.MeshBasicMaterial({
+        color: new THREE.Color("#fffff0"),
+    })
 )
-scene.add(debugSun);
+//scene.add(debugSun);
+const sunLensFlare = new Lensflare()
+sunLensFlare.addElement(new LensflareElement(sunTextureFlare, 512))
+//lensFlare.addElement(new LensflareElement(flareTexture1, 512, 8))
+
+const lightLensflare = new THREE.PointLight()
+lightLensflare.add(sunLensFlare);
+scene.add(lightLensflare);
+
+
+
 
 const updateSun = () => {
     //updating the sunDirection according to the sunSpherical
@@ -159,8 +190,12 @@ const updateSun = () => {
     //debug-  copy the values from sunDirection; with the radius sunSpherical = 1;  and Earth radius = 2, the mesh is still inside the Earth
     debugSun.position
         .copy(sunDirection)
-        .multiplyScalar(5);
+        .multiplyScalar(18);
 
+    lightLensflare.position
+        .copy(sunDirection).multiplyScalar(18);
+
+    
     // update uniform
     earthMaterial.uniforms.uSunDirection.value.copy(sunDirection);
     atmosphereMaterial.uniforms.uSunDirection.value.copy(sunDirection);
@@ -168,11 +203,18 @@ const updateSun = () => {
 updateSun();
 
 //Tweaks
+/**
+ * Sun- phi & theta: the angles used in the spherical coordinate system 
+ * to describe the position of a point on the surface of the sphere.
+ * phi - polar angle in radians from 0 to up. By default is 0
+ * theta - equator angle in radians around the y(up ) axis
+ * Since the sunSpherical radius = 1; => sunDirection lenght sould be 1 <=> equal in fragment.glsl
+ */
 
 gui
     .add(sunSpherical, 'phi')
-    .min(0)
-    .max(Math.PI)
+    .min(Math.PI * 0.3)
+    .max(Math.PI * 0.7)
     .onChange(updateSun)
 
 gui
@@ -180,6 +222,10 @@ gui
     .min(- Math.PI)
     .max(Math.PI)
     .onChange(updateSun)
+
+
+
+
 /**
  * Sizes
  */
@@ -224,7 +270,8 @@ controls.enableDamping = true;
  */
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
-    antialias: true
+    antialias: true,
+   // alpha: true
 });
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(sizes.pixelRatio);
@@ -244,6 +291,7 @@ const tick = () =>
     // Update controls
     controls.update();
 
+   
     // Render
     renderer.render(scene, camera);
 
