@@ -115,6 +115,7 @@ earthSpecularCloundsTexture.anisotropy = 8;
 // Mesh
 const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
 const earthMaterial = new THREE.ShaderMaterial({
+
     vertexShader: earthVertexShader,
     fragmentShader: earthFragmentShader,
     uniforms:
@@ -191,6 +192,7 @@ const updateSun = () => {
     debugSun.position
         .copy(sunDirection)
         .multiplyScalar(18);
+
 
     lightLensflare.position
         .copy(sunDirection).multiplyScalar(18);
@@ -287,6 +289,12 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime();
 
     earth.rotation.y = elapsedTime * 0.1;
+
+    // debugSun.position.x = Math.cos(elapsedTime) * 5;
+    // debugSun.position.z = Math.sin(elapsedTime) * 5;
+    // lightLensflare.position.x = Math.cos(elapsedTime) * 5;
+    // lightLensflare.position.z = Math.sin(elapsedTime) * 5;
+
 
     // Update controls
     controls.update();

@@ -60,11 +60,11 @@ void main()
     vec3 reflection = reflect( - uSunDirection, normal);
     float specular = - dot(reflection, viewDirection);
     specular = max(0.0, specular);
-    specular = pow(specular, 32.0);
+    specular = pow(specular, 10000000.0);
      specular *= specularCloudsColor.r;
 
-    // we want the specular to have the color of atmosphereColor, but only when specular is on the edges, despite we need to the fresnel
-    vec3 specularColor = mix(vec3(1.0), atmosphereColor, fresnel);
+   // we want the specular to have the color of atmosphereColor, but only when specular is on the edges, despite we need to the fresnel
+   vec3 specularColor = mix(vec3(1.0), atmosphereColor, fresnel);
 
        
     color += specular * specularColor;
